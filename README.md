@@ -2,7 +2,193 @@
 
 **Bayesian Analysis for Applied Social Science and Education Research** is a two-day hands-on workshop for researchers who already use frequentist methods and want to learn Bayesian analysis as a practical research workflow.
 
-The materials are designed around Quarto notebooks, realistic education and social science examples, and reusable reporting templates.
+The materials are packaged as a Quarto website with participant notebooks, teaching datasets, facilitator notes, slides, and reporting templates.
+
+## Quick Start
+
+Follow these steps to run the workshop materials locally.
+
+### 1. Clone the Repository
+
+```powershell
+git clone https://github.com/moeketsims/BayesianAnalysis.git
+cd BayesianAnalysis
+```
+
+If you already have the repository locally, move into the project folder:
+
+```powershell
+cd "C:\Users\Moeketsi\Documents\New project 5"
+```
+
+### 2. Install Required Software
+
+Install these first:
+
+1. **R**: <https://cran.r-project.org/>
+2. **Quarto**: <https://quarto.org/docs/get-started/>
+3. **RStudio** or **Positron**: recommended for working with the notebooks.
+4. **Node.js**: optional, only needed if you want to regenerate or validate the synthetic datasets.
+
+Check that R and Quarto are available:
+
+```powershell
+Rscript --version
+quarto --version
+```
+
+### 3. Install R Packages
+
+From the project folder, run:
+
+```powershell
+Rscript setup/packages.R
+```
+
+This installs the main packages used in the workshop, including:
+
+- `brms`
+- `cmdstanr`
+- `tidyverse`
+- `tidybayes`
+- `bayesplot`
+- `posterior`
+- `loo`
+
+Bayesian modeling with `brms` uses Stan, so installation can take time.
+
+### 4. Test the R Setup
+
+Run:
+
+```powershell
+Rscript setup/test_installation.R
+```
+
+If the test reports missing packages, rerun:
+
+```powershell
+Rscript setup/packages.R
+```
+
+If CmdStan is missing inside R, run:
+
+```r
+cmdstanr::install_cmdstan()
+```
+
+More setup detail is available in [setup/install_guide.md](setup/install_guide.md).
+
+### 5. Validate the Workshop Files
+
+If Node.js is installed, run:
+
+```powershell
+node scripts/validate_structure.mjs
+```
+
+Expected output:
+
+```text
+Workshop package structure validated.
+```
+
+### 6. Regenerate the Synthetic Datasets, Optional
+
+The datasets are already included. To regenerate them:
+
+```powershell
+node scripts/generate_synthetic_data.mjs
+```
+
+This rewrites the files in `data/` using a fixed seed.
+
+### 7. Preview the Workshop Website
+
+Run:
+
+```powershell
+quarto preview
+```
+
+Quarto will start a local server and print a URL such as:
+
+```text
+http://localhost:4200
+```
+
+Open that URL in your browser.
+
+### 8. Open Individual Notebooks
+
+You can also open the notebooks directly in RStudio or Positron:
+
+```text
+notebooks/01_bayesian_reasoning.qmd
+notebooks/02_priors.qmd
+notebooks/03_bayesian_regression.qmd
+notebooks/04_binary_and_ordinal_models.qmd
+notebooks/05_hierarchical_models.qmd
+notebooks/06_model_checking.qmd
+notebooks/07_reporting.qmd
+```
+
+## If Something Does Not Work
+
+### `Rscript` is not recognized
+
+R is either not installed or not on your system path. Install R, restart PowerShell, and try again.
+
+### `quarto` is not recognized
+
+Install Quarto from <https://quarto.org/docs/get-started/> and restart PowerShell.
+
+### Stan or CmdStan fails
+
+Stan needs a working C++ toolchain.
+
+On Windows, install RTools for your R version. Then restart R and run:
+
+```r
+cmdstanr::install_cmdstan()
+```
+
+### Bayesian models take too long
+
+The notebooks can still be used for teaching and interpretation. The facilitator should render the notebooks in advance and keep expected outputs available.
+
+## Repository Structure
+
+```text
+.
+  README.md
+  WORKSHOP_DEVELOPMENT_PLAN.md
+  _quarto.yml
+  index.qmd
+  setup/
+    install_guide.md
+    packages.R
+    test_installation.R
+  data/
+    education_intervention.csv
+    teacher_adoption_survey.csv
+    student_engagement_ordinal.csv
+    data_dictionary_*.md
+  notebooks/
+    00_notebook_template.qmd
+    01_bayesian_reasoning.qmd
+    02_priors.qmd
+    03_bayesian_regression.qmd
+    04_binary_and_ordinal_models.qmd
+    05_hierarchical_models.qmd
+    06_model_checking.qmd
+    07_reporting.qmd
+  facilitator-guide/
+  reporting-templates/
+  slides/
+  solutions/
+  scripts/
+```
 
 ## Audience
 
@@ -15,34 +201,6 @@ This workshop assumes participants already understand common applied methods:
 - applied research design and reporting.
 
 It does not assume prior Bayesian training or Stan programming experience.
-
-## Workshop Package
-
-```text
-.
-  WORKSHOP_DEVELOPMENT_PLAN.md
-  README.md
-  _quarto.yml
-  index.qmd
-  setup/
-  data/
-  notebooks/
-  slides/
-  facilitator-guide/
-  reporting-templates/
-  solutions/
-  scripts/
-```
-
-## Recommended Delivery Format
-
-Use the Quarto website as the main participant interface:
-
-```powershell
-quarto preview
-```
-
-Participants can also open individual notebooks from the `notebooks/` folder in RStudio or Positron.
 
 ## Main Workflow Taught
 
@@ -58,37 +216,6 @@ research question
   -> reporting
 ```
 
-## Software
-
-Primary stack:
-
-- R
-- RStudio or Positron
-- Quarto
-- `brms`
-- `cmdstanr`
-- `tidyverse`
-- `tidybayes`
-- `bayesplot`
-- `posterior`
-- `loo`
-
-See [setup/install_guide.md](setup/install_guide.md) for participant setup instructions.
-
-## Data
-
-The teaching datasets are simulated but realistic enough for social science and education examples:
-
-- `education_intervention.csv`: student achievement intervention data with school nesting.
-- `teacher_adoption_survey.csv`: binary adoption outcome for a policy or intervention.
-- `student_engagement_ordinal.csv`: ordinal Likert-style engagement outcome.
-
-Regenerate datasets with:
-
-```powershell
-node scripts/generate_synthetic_data.mjs
-```
-
 ## Suggested Teaching Sequence
 
 Day 1:
@@ -101,10 +228,20 @@ Day 2:
 
 1. Bayesian hierarchical models.
 2. Model checking and model comparison.
-3. Reporting Bayesian results.
-4. Applied planning for participants' own research.
+3. Binary and ordinal model extensions.
+4. Reporting Bayesian results.
+5. Applied planning for participants' own research.
 
-## Current Development Status
+## Main Materials
 
-This repository contains a first complete source package. The next recommended step is to render the Quarto site on a machine with R and Quarto installed, then pilot Notebook 01 with a small group.
+- [Workshop development plan](WORKSHOP_DEVELOPMENT_PLAN.md)
+- [Setup guide](setup/install_guide.md)
+- [Participant notebooks](notebooks/)
+- [Facilitator guide](facilitator-guide/facilitator_guide.md)
+- [Participant analysis plan](facilitator-guide/participant_analysis_plan.md)
+- [Reporting templates](reporting-templates/bayesian_reporting_templates.md)
+- [Slides](slides/workshop_slides.qmd)
 
+## Development Status
+
+This repository contains the first complete source package. The next recommended step is to render the Quarto site on a machine with R and Quarto installed, then pilot Notebook 01 with a small group.
