@@ -15,10 +15,16 @@ git clone https://github.com/moeketsims/BayesianAnalysis.git
 cd BayesianAnalysis
 ```
 
-If you already have the repository locally, move into the project folder:
+If you already have the repository locally, move into the folder where you saved or cloned it:
 
 ```powershell
-cd "C:\Users\Moeketsi\Documents\New project 5"
+cd "path\to\BayesianAnalysis"
+```
+
+For example, if you cloned it into your Documents folder, the command might be:
+
+```powershell
+cd "$HOME\Documents\BayesianAnalysis"
 ```
 
 ### 2. Install Required Software
