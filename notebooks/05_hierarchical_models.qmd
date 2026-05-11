@@ -1,0 +1,155 @@
+---
+title: "05 Bayesian Hierarchical Models"
+subtitle: "Partial pooling for nested social science and education data"
+format:
+  html:
+    toc: true
+    number-sections: true
+execute:
+  warning: false
+  message: false
+---
+
+## Learning Outcomes
+
+By the end of this module, participants should be able to:
+
+1. Explain complete pooling, no pooling, and partial pooling.
+2. Fit a varying-intercept Bayesian hierarchical model.
+3. Interpret school-level variation and shrinkage.
+4. Explain why hierarchical models are useful with sparse group data.
+
+## Research Scenario
+
+Students are nested within schools. Scores may vary by school because of leadership, resources, context, peer composition, and other unmeasured factors.
+
+```{r}
+library(tidyverse)
+
+education <- read_csv("data/education_intervention.csv")
+
+education |>
+  count(school_id)
+```
+
+## Three Ways to Handle Schools
+
+### Complete Pooling
+
+Ignore school differences:
+
+```text
+endline_score ~ intervention + baseline_score + ses_index
+```
+
+### No Pooling
+
+Estimate each school separately:
+
+```text
+endline_score ~ school_id
+```
+
+This can be unstable when some schools have few students.
+
+### Partial Pooling
+
+Estimate school-level variation while sharing information across schools:
+
+```text
+endline_score ~ intervention + baseline_score + ses_index + (1 | school_id)
+```
+
+Partial pooling shrinks noisy school estimates toward the overall mean, especially for schools with less data.
+
+## Fit the Hierarchical Model
+
+```{r}
+#| eval: false
+library(brms)
+
+hier_model <- brm(
+  endline_score ~ intervention + baseline_score + ses_index + (1 | school_id),
+  data = education,
+  family = gaussian(),
+  prior = c(
+    prior(normal(60, 15), class = "Intercept"),
+    prior(normal(0, 10), class = "b", coef = "intervention"),
+    prior(normal(0.6, 0.2), class = "b", coef = "baseline_score"),
+    prior(normal(0, 4), class = "b", coef = "ses_index"),
+    prior(exponential(1), class = "sd"),
+    prior(exponential(1), class = "sigma")
+  ),
+  backend = "cmdstanr",
+  chains = 4,
+  cores = 4,
+  iter = 2000,
+  seed = 2026
+)
+```
+
+## School-Level Estimates
+
+```{r}
+#| eval: false
+library(tidybayes)
+
+school_effects <- hier_model |>
+  spread_draws(r_school_id[school_id, term])
+
+school_effects |>
+  filter(term == "Intercept") |>
+  group_by(school_id) |>
+  median_qi(r_school_id) |>
+  ggplot(aes(y = reorder(school_id, r_school_id), x = r_school_id)) +
+  geom_pointinterval() +
+  geom_vline(xintercept = 0, linetype = "dashed") +
+  labs(
+    title = "School-level deviations from the overall intercept",
+    x = "School effect",
+    y = "School"
+  )
+```
+
+## Visualizing Partial Pooling Conceptually
+
+```{r}
+school_means <- education |>
+  group_by(school_id) |>
+  summarise(
+    n = n(),
+    raw_mean = mean(endline_score),
+    .groups = "drop"
+  )
+
+overall_mean <- mean(education$endline_score)
+
+school_means |>
+  ggplot(aes(x = raw_mean, y = reorder(school_id, raw_mean), size = n)) +
+  geom_point(color = "firebrick") +
+  geom_vline(xintercept = overall_mean, linetype = "dashed") +
+  labs(
+    title = "Raw school means before partial pooling",
+    x = "Raw school mean endline score",
+    y = "School",
+    size = "n"
+  )
+```
+
+Raw school means are not the same as hierarchical posterior estimates, but this plot helps show why school sample size matters.
+
+## Exercise
+
+1. Fit the hierarchical model.
+2. Compare the intervention effect from the non-hierarchical and hierarchical models.
+3. Plot school-level effects.
+4. Identify one school with high uncertainty and explain why the uncertainty is high.
+
+## Reporting Template
+
+> We fitted a Bayesian varying-intercept model with students nested within schools. The model estimated the intervention effect while allowing baseline achievement to vary across schools through school-level intercepts. The posterior distribution of the school-level standard deviation indicated [small/moderate/large] between-school variation after accounting for student-level predictors.
+
+## Takeaway
+
+Hierarchical models are one of the strongest reasons applied researchers should learn Bayesian analysis. They allow researchers to estimate group-level variation while avoiding the instability of separate estimates for every group.
+

@@ -1,0 +1,130 @@
+---
+title: "06 Model Checking and Model Comparison"
+subtitle: "How to decide whether a Bayesian model is credible"
+format:
+  html:
+    toc: true
+    number-sections: true
+execute:
+  warning: false
+  message: false
+---
+
+## Learning Outcomes
+
+By the end of this module, participants should be able to:
+
+1. Check basic MCMC diagnostics.
+2. Use posterior predictive checks.
+3. Compare models using LOO.
+4. Separate computational problems from substantive model problems.
+
+## Two Kinds of Checking
+
+Bayesian model checking asks two different questions:
+
+1. Did the computation work?
+2. Does the model describe the data well enough for the research purpose?
+
+Both matter.
+
+## Computational Diagnostics
+
+Important diagnostics:
+
+- R-hat close to 1.00;
+- adequate effective sample size;
+- no divergent transitions;
+- trace plots without obvious pathologies;
+- no warnings that indicate serious sampler problems.
+
+```{r}
+#| eval: false
+summary(bayes_model)
+plot(bayes_model)
+```
+
+Interpretation:
+
+- R-hat above 1.01 deserves attention.
+- Divergent transitions should not be ignored.
+- Low effective sample size means posterior summaries may be unreliable.
+
+## Posterior Predictive Checks
+
+A posterior predictive check asks:
+
+> If the model were true, would simulated data look like the observed data?
+
+```{r}
+#| eval: false
+library(bayesplot)
+
+pp_check(bayes_model, ndraws = 50)
+```
+
+Useful checks:
+
+```{r}
+#| eval: false
+pp_check(bayes_model, type = "dens_overlay", ndraws = 50)
+pp_check(bayes_model, type = "stat", stat = "mean")
+pp_check(bayes_model, type = "stat", stat = "sd")
+```
+
+## What Poor Fit Can Mean
+
+Poor posterior predictive fit may indicate:
+
+- wrong likelihood;
+- missing predictors;
+- nonlinear relationship;
+- unmodeled group structure;
+- outliers or heavy tails;
+- inappropriate priors;
+- measurement problems.
+
+The point is not to chase a perfect model. The point is to know whether the model is adequate for the claim being made.
+
+## Model Comparison with LOO
+
+LOO estimates expected out-of-sample predictive performance.
+
+```{r}
+#| eval: false
+library(loo)
+
+loo_simple <- loo(bayes_model)
+loo_hier <- loo(hier_model)
+
+loo_compare(loo_simple, loo_hier)
+```
+
+LOO answers a predictive question, not a universal truth question. A model with better predictive performance is not automatically more interpretable or theoretically preferred.
+
+## Exercise
+
+For a fitted model:
+
+1. Check R-hat and effective sample size.
+2. Inspect trace plots.
+3. Run a posterior predictive density overlay.
+4. Compare two models with LOO.
+5. Write a short model-checking note.
+
+## Model-Checking Checklist
+
+| Check | Question | Result |
+|---|---|---|
+| R-hat | Are values close to 1.00? | |
+| ESS | Are effective sample sizes adequate? | |
+| Divergences | Are there divergent transitions? | |
+| Trace plots | Do chains mix well? | |
+| Posterior predictive check | Do simulated data resemble observed data? | |
+| Sensitivity | Do conclusions depend heavily on a questionable prior? | |
+| Substantive adequacy | Is the model good enough for the claim? | |
+
+## Takeaway
+
+Bayesian analysis is not complete when the model finishes running. A credible workflow includes computational diagnostics, posterior predictive checks, and sensitivity checks before making substantive claims.
+

@@ -1,0 +1,172 @@
+---
+title: "03 Bayesian Linear Regression"
+subtitle: "Translating familiar regression into posterior inference"
+format:
+  html:
+    toc: true
+    number-sections: true
+execute:
+  warning: false
+  message: false
+---
+
+## Learning Outcomes
+
+By the end of this module, participants should be able to:
+
+1. Fit a Bayesian linear regression model using `brms`.
+2. Interpret posterior means, credible intervals, and posterior probabilities.
+3. Compare frequentist and Bayesian regression language.
+4. Report whether an effect is practically meaningful.
+
+## Research Scenario
+
+We estimate whether an education intervention improves endline achievement after adjusting for baseline score and socioeconomic status.
+
+```{r}
+library(tidyverse)
+
+education <- read_csv("data/education_intervention.csv")
+
+education |>
+  select(endline_score, intervention, baseline_score, ses_index, attendance_rate) |>
+  summary()
+```
+
+## Frequentist Baseline
+
+```{r}
+freq_model <- lm(
+  endline_score ~ intervention + baseline_score + ses_index,
+  data = education
+)
+
+summary(freq_model)
+```
+
+The frequentist output provides a point estimate, standard error, test statistic, p-value, and confidence interval. It does not directly provide the probability that the intervention effect is positive or practically meaningful.
+
+## Bayesian Model
+
+The Bayesian model uses the same likelihood structure:
+
+```text
+endline_score_i ~ Normal(mu_i, sigma)
+mu_i = alpha + beta_1 intervention_i + beta_2 baseline_score_i + beta_3 ses_index_i
+```
+
+Priors:
+
+```text
+alpha ~ Normal(60, 15)
+beta_intervention ~ Normal(0, 10)
+beta_baseline ~ Normal(0.6, 0.2)
+beta_ses ~ Normal(0, 4)
+sigma ~ Exponential(1)
+```
+
+## Fit with brms
+
+```{r}
+#| eval: false
+library(brms)
+
+bayes_model <- brm(
+  endline_score ~ intervention + baseline_score + ses_index,
+  data = education,
+  family = gaussian(),
+  prior = c(
+    prior(normal(60, 15), class = "Intercept"),
+    prior(normal(0, 10), class = "b", coef = "intervention"),
+    prior(normal(0.6, 0.2), class = "b", coef = "baseline_score"),
+    prior(normal(0, 4), class = "b", coef = "ses_index"),
+    prior(exponential(1), class = "sigma")
+  ),
+  backend = "cmdstanr",
+  chains = 4,
+  cores = 4,
+  iter = 2000,
+  seed = 2026
+)
+
+summary(bayes_model)
+```
+
+## Posterior Interpretation
+
+```{r}
+#| eval: false
+library(tidybayes)
+
+posterior_draws <- bayes_model |>
+  spread_draws(b_intervention)
+
+posterior_draws |>
+  summarise(
+    mean = mean(b_intervention),
+    lower_95 = quantile(b_intervention, 0.025),
+    upper_95 = quantile(b_intervention, 0.975),
+    prob_positive = mean(b_intervention > 0),
+    prob_practical = mean(b_intervention > 3)
+  )
+```
+
+Useful claims:
+
+- The posterior mean effect is the average effect across the posterior draws.
+- The 95% credible interval contains the central 95% of posterior mass.
+- `Pr(effect > 0 | data)` answers whether the intervention is likely beneficial under the model.
+- `Pr(effect > 3 | data)` answers whether the effect likely exceeds a practical threshold.
+
+## Posterior Plot
+
+```{r}
+#| eval: false
+posterior_draws |>
+  ggplot(aes(b_intervention)) +
+  geom_density(fill = "steelblue", alpha = 0.35) +
+  geom_vline(xintercept = 0, linetype = "dashed") +
+  geom_vline(xintercept = 3, linetype = "dotted") +
+  labs(
+    title = "Posterior distribution of the intervention effect",
+    x = "Effect in endline score points",
+    y = "Density"
+  )
+```
+
+## Posterior Predictions
+
+```{r}
+#| eval: false
+new_students <- tibble(
+  intervention = c(0, 1),
+  baseline_score = mean(education$baseline_score),
+  ses_index = 0
+)
+
+predicted <- add_epred_draws(bayes_model, newdata = new_students)
+
+predicted |>
+  group_by(intervention) |>
+  median_qi(.epred)
+```
+
+This expresses the expected endline score for comparable students with and without the intervention.
+
+## Exercise
+
+Using the Bayesian model:
+
+1. Estimate the posterior probability that the intervention effect is positive.
+2. Estimate the posterior probability that the intervention effect is greater than 3 points.
+3. Create a posterior density plot.
+4. Write a results paragraph for an applied education report.
+
+## Reporting Template
+
+> The posterior mean intervention effect was [X] score points, with a 95% credible interval from [L] to [U]. The posterior probability that the intervention improved scores was [P1], and the probability that the effect exceeded the practical threshold of 3 points was [P2]. These results suggest [interpretation in substantive language].
+
+## Takeaway
+
+Bayesian regression uses familiar model structures but changes the inferential output. Instead of asking whether a coefficient is statistically significant, we summarize what the posterior distribution says about the size, direction, and practical importance of the effect.
+

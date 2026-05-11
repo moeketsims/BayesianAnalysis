@@ -1,0 +1,164 @@
+---
+title: "02 Priors and Prior Predictive Checks"
+subtitle: "Making assumptions explicit and testable"
+format:
+  html:
+    toc: true
+    number-sections: true
+execute:
+  warning: false
+  message: false
+---
+
+## Learning Outcomes
+
+By the end of this module, participants should be able to:
+
+1. Explain weakly informative, skeptical, and informed priors.
+2. Specify plausible priors for regression coefficients.
+3. Use prior predictive simulation to check whether priors imply realistic data.
+4. Write a defensible prior justification.
+
+## Why Priors Matter
+
+In Bayesian analysis, the prior is part of the model. It should be transparent, justified, and checked.
+
+A prior can represent:
+
+- weak background knowledge;
+- skepticism about very large effects;
+- previous research evidence;
+- measurement scale constraints;
+- regularization to avoid unstable estimates.
+
+A prior is not automatically a problem. An unexamined prior is a problem.
+
+## Research Scenario
+
+The main dataset studies whether an education intervention improves endline test scores.
+
+```{r}
+library(tidyverse)
+
+education <- read_csv("data/education_intervention.csv")
+
+glimpse(education)
+```
+
+The outcome is `endline_score`, measured from 0 to 100. A substantively meaningful improvement might be 3 points or more.
+
+## Prior Types
+
+For an intervention effect measured in score points:
+
+```text
+weakly informative: Normal(0, 10)
+skeptical:          Normal(0, 3)
+optimistic:         Normal(4, 3)
+```
+
+Interpretation:
+
+- `Normal(0, 10)` allows large positive or negative effects but still regularizes extreme values.
+- `Normal(0, 3)` says effects near zero are more plausible and very large effects are less plausible.
+- `Normal(4, 3)` represents prior evidence or expert belief that the intervention likely helps.
+
+## Prior Predictive Simulation
+
+Before fitting the model, ask:
+
+> If these priors were true, what kinds of data could the model generate?
+
+```{r}
+set.seed(42)
+
+n_sims <- 1000
+
+prior_draws <- tibble(
+  draw = 1:n_sims,
+  intercept = rnorm(n_sims, 60, 15),
+  beta_intervention_weak = rnorm(n_sims, 0, 10),
+  beta_intervention_skeptical = rnorm(n_sims, 0, 3),
+  beta_intervention_optimistic = rnorm(n_sims, 4, 3),
+  beta_baseline = rnorm(n_sims, 0.6, 0.2),
+  sigma = abs(rnorm(n_sims, 8, 3))
+)
+
+prior_draws |>
+  select(draw, starts_with("beta_intervention")) |>
+  pivot_longer(-draw, names_to = "prior", values_to = "effect") |>
+  ggplot(aes(effect, fill = prior)) +
+  geom_density(alpha = 0.35) +
+  geom_vline(xintercept = 3, linetype = "dashed") +
+  labs(
+    title = "Prior distributions for the intervention effect",
+    x = "Intervention effect in score points",
+    y = "Density"
+  )
+```
+
+## Prior Predictive Check with brms
+
+The following model samples from the prior only. It is marked `eval: false` because fitting requires a working Stan installation.
+
+```{r}
+#| eval: false
+library(brms)
+
+prior_model <- brm(
+  endline_score ~ intervention + baseline_score + ses_index,
+  data = education,
+  family = gaussian(),
+  prior = c(
+    prior(normal(60, 15), class = "Intercept"),
+    prior(normal(0, 10), class = "b", coef = "intervention"),
+    prior(normal(0.6, 0.2), class = "b", coef = "baseline_score"),
+    prior(normal(0, 4), class = "b", coef = "ses_index"),
+    prior(exponential(1), class = "sigma")
+  ),
+  sample_prior = "only",
+  backend = "cmdstanr",
+  chains = 4,
+  cores = 4,
+  iter = 1000
+)
+
+pp_check(prior_model, ndraws = 50)
+```
+
+## Prior Justification Table
+
+Complete this table before fitting the model:
+
+| Parameter | Prior | Reason | Prior predictive concern |
+|---|---|---|---|
+| Intercept | Normal(60, 15) | Scores usually center around the middle of the scale. | Does it generate impossible scores? |
+| Intervention | Normal(0, 10) | Allows a wide range of effects but reduces extreme values. | Does it imply implausibly large gains? |
+| Baseline score | Normal(0.6, 0.2) | Baseline and endline should be positively related. | Does it force too strong a relationship? |
+| SES index | Normal(0, 4) | SES effects are plausible but should not dominate. | Does it imply extreme score differences? |
+| Sigma | Exponential(1) | Positive residual variation. | Is residual variation too small or too large? |
+
+## Exercise
+
+Create three priors for the intervention effect:
+
+1. A weakly informative prior.
+2. A skeptical prior.
+3. An informed prior based on a previous study that found a 4-point gain.
+
+For each prior:
+
+1. Plot it.
+2. State what effect sizes it treats as plausible.
+3. State what would make it inappropriate.
+
+## Reporting Priors
+
+A concise prior statement:
+
+> The intervention coefficient was assigned a weakly informative Normal(0, 10) prior on the score-point scale. This prior centers the effect at no difference while allowing effects large enough to cover plausible educational impacts. We checked the prior predictive distribution to ensure it did not place substantial probability on impossible or substantively implausible outcome values.
+
+## Takeaway
+
+Priors should be chosen on the scale of the model and checked against plausible data. Prior predictive checks turn prior choice from a philosophical debate into a model criticism exercise.
+

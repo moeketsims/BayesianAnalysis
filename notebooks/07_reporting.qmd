@@ -1,0 +1,116 @@
+---
+title: "07 Reporting Bayesian Analysis"
+subtitle: "Turning posterior inference into clear research communication"
+format:
+  html:
+    toc: true
+    number-sections: true
+execute:
+  warning: false
+  message: false
+---
+
+## Learning Outcomes
+
+By the end of this module, participants should be able to:
+
+1. Write a Bayesian methods paragraph.
+2. Report priors transparently.
+3. Report posterior estimates and uncertainty clearly.
+4. Communicate practical significance using posterior probabilities.
+5. Explain Bayesian results to readers familiar with frequentist methods.
+
+## What Bayesian Reporting Must Include
+
+A Bayesian report should usually include:
+
+- model likelihood and link function;
+- outcome and predictors;
+- prior distributions and justification;
+- software and sampler details;
+- convergence diagnostics;
+- posterior summaries;
+- posterior predictive checks;
+- sensitivity analysis where priors may affect conclusions.
+
+## Methods Paragraph Template
+
+> We fitted a Bayesian [linear/logistic/ordinal/hierarchical] model to estimate [research quantity]. The outcome was [outcome], and predictors included [predictors]. The model used a [likelihood] likelihood with [link if applicable]. Priors were chosen to be [weakly informative/skeptical/informed] on the scale of the model. The intervention coefficient was assigned a [prior] prior because [reason]. Models were fitted in R using `brms` with the CmdStan backend. We assessed convergence using R-hat, effective sample size, trace plots, and posterior predictive checks.
+
+## Results Paragraph Template
+
+> The posterior mean intervention effect was [X], with a 95% credible interval from [L] to [U]. The posterior probability that the effect was positive was [P1]. The posterior probability that the effect exceeded the practical threshold of [T] was [P2]. These results suggest that [substantive interpretation], while uncertainty remains about [uncertainty statement].
+
+## Prior Reporting Template
+
+| Parameter | Prior | Justification |
+|---|---|---|
+| Intercept | | |
+| Main effect | | |
+| Covariates | | |
+| Residual SD or group SD | | |
+
+## Frequentist-to-Bayesian Translation
+
+Instead of:
+
+> The intervention was statistically significant, p < .05.
+
+Use:
+
+> The posterior probability that the intervention effect was positive was 0.98, and the probability that it exceeded the pre-specified practical threshold was 0.73.
+
+Instead of:
+
+> The result was not significant.
+
+Use:
+
+> The posterior distribution remains compatible with both small negative and small positive effects. The probability that the effect exceeds the practical threshold is low, suggesting limited evidence for a substantively important effect under this model.
+
+## Sensitivity Statement
+
+> We repeated the analysis using a skeptical prior centered at zero with a smaller standard deviation. The posterior mean was slightly closer to zero, but the probability that the effect was positive remained high. The conclusion that the intervention likely improved scores was therefore not dependent on the weakly informative prior.
+
+## Figure Guidance
+
+Useful Bayesian figures:
+
+- posterior density of the main effect;
+- interval plot of coefficients;
+- predicted outcome by condition;
+- posterior predictive check;
+- group-level effects in hierarchical models;
+- sensitivity plot comparing priors.
+
+Avoid figures that require readers to decode too much Bayesian machinery before understanding the substantive result.
+
+## Exercise
+
+Using one model from the workshop:
+
+1. Write a methods paragraph.
+2. Write a results paragraph.
+3. Add one prior justification sentence.
+4. Add one model-checking sentence.
+5. Add one sensitivity-analysis sentence.
+
+## Final Participant Output
+
+By the end of the workshop, each participant should have a one-page Bayesian analysis brief:
+
+```text
+Research question
+Model
+Priors
+Main posterior result
+Practical threshold result
+Model checking note
+Sensitivity note
+Plain-language conclusion
+```
+
+## Takeaway
+
+Bayesian reporting should make uncertainty more transparent, not more obscure. The best reports connect posterior quantities directly to the research decision or substantive claim.
+

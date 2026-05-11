@@ -1,0 +1,75 @@
+---
+title: "Bayesian Analysis for Applied Social Science and Education Research"
+subtitle: "Two-day hands-on workshop"
+---
+
+## Purpose
+
+This workshop helps applied researchers move from familiar frequentist analysis to Bayesian model-based reasoning. The focus is not on introductory statistics. The focus is on how researchers can use Bayesian analysis to make clearer claims about uncertainty, prior knowledge, practical significance, multilevel data, and cumulative evidence.
+
+## What Participants Will Learn
+
+By the end of the workshop, participants should be able to:
+
+1. Explain the roles of likelihood, prior, and posterior.
+2. Interpret posterior distributions and credible intervals.
+3. Specify and justify weakly informative, skeptical, and informed priors.
+4. Fit Bayesian regression models in R using `brms`.
+5. Use prior predictive and posterior predictive checks.
+6. Fit a basic Bayesian hierarchical model.
+7. Compare models using predictive criteria.
+8. Write Bayesian methods and results paragraphs for applied research.
+
+## Workshop Materials
+
+The core participant materials are the notebooks:
+
+- [01 Bayesian Reasoning](notebooks/01_bayesian_reasoning.qmd)
+- [02 Priors](notebooks/02_priors.qmd)
+- [03 Bayesian Regression](notebooks/03_bayesian_regression.qmd)
+- [04 Binary and Ordinal Models](notebooks/04_binary_and_ordinal_models.qmd)
+- [05 Hierarchical Models](notebooks/05_hierarchical_models.qmd)
+- [06 Model Checking](notebooks/06_model_checking.qmd)
+- [07 Reporting](notebooks/07_reporting.qmd)
+
+Supporting materials:
+
+- [Setup Guide](setup/install_guide.md)
+- [Facilitator Guide](facilitator-guide/facilitator_guide.md)
+- [Reporting Templates](reporting-templates/bayesian_reporting_templates.md)
+
+## Two-Day Flow
+
+### Day 1: Bayesian Reasoning and the Core Workflow
+
+- Why Bayesian analysis matters for applied researchers.
+- Bayes' rule as a model of learning from evidence.
+- Priors and prior predictive checks.
+- Bayesian linear regression.
+- Interpretation of posterior estimates.
+
+### Day 2: Applied Modeling, Checking, and Reporting
+
+- Bayesian hierarchical models.
+- Model diagnostics and posterior predictive checks.
+- Model comparison using predictive criteria.
+- Binary and ordinal extensions.
+- Reporting Bayesian findings.
+- Planning participants' own Bayesian analyses.
+
+## Teaching Principle
+
+Each module follows the same pattern:
+
+```text
+research scenario
+  -> frequentist framing
+  -> Bayesian reframing
+  -> model
+  -> prior
+  -> prior predictive check
+  -> posterior
+  -> model check
+  -> reporting
+```
+

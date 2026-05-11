@@ -1,0 +1,188 @@
+---
+title: "01 Bayesian Reasoning for Frequentist Researchers"
+subtitle: "From significance decisions to posterior uncertainty"
+format:
+  html:
+    toc: true
+    number-sections: true
+execute:
+  warning: false
+  message: false
+---
+
+## Learning Outcomes
+
+By the end of this module, participants should be able to:
+
+1. Explain Bayesian inference as updating from prior to posterior using data.
+2. Distinguish a confidence interval from a credible interval.
+3. State research questions as posterior probability questions.
+4. Use a simple binomial example to see how priors and data combine.
+
+## The Shift
+
+Frequentist analysis usually asks:
+
+> How unusual would these data, or more extreme data, be if a null model were true?
+
+Bayesian analysis asks:
+
+> Given the data and the model assumptions, what do we now believe about the unknown quantity?
+
+For applied researchers, the second question is often closer to the real research question.
+
+## Familiar Example
+
+Suppose an education researcher pilots a new reading support program with 30 learners. After the program, 21 learners reach a defined proficiency benchmark.
+
+The raw observed proportion is:
+
+```{r}
+successes <- 21
+n <- 30
+successes / n
+```
+
+A frequentist analysis might report a confidence interval for the proportion. A Bayesian analysis treats the true benchmark probability as uncertain and estimates a posterior distribution for it.
+
+## Bayes' Rule
+
+The central relationship is:
+
+```text
+posterior proportional to likelihood x prior
+```
+
+In symbols:
+
+```text
+p(theta | data) proportional to p(data | theta) x p(theta)
+```
+
+Where:
+
+- `theta` is the unknown quantity;
+- `p(theta)` is the prior;
+- `p(data | theta)` is the likelihood;
+- `p(theta | data)` is the posterior.
+
+## A Binomial Updating Example
+
+For a proportion, a convenient teaching model is:
+
+```text
+successes ~ Binomial(n, theta)
+theta ~ Beta(a, b)
+```
+
+The beta prior is useful because it is defined between 0 and 1.
+
+```{r}
+library(tidyverse)
+
+theta_grid <- seq(0, 1, length.out = 1000)
+
+prior_grid <- tibble(
+  theta = theta_grid,
+  weak = dbeta(theta, 1, 1),
+  skeptical = dbeta(theta, 4, 6),
+  optimistic = dbeta(theta, 8, 3)
+)
+
+prior_grid |>
+  pivot_longer(-theta, names_to = "prior", values_to = "density") |>
+  ggplot(aes(theta, density, color = prior)) +
+  geom_line(linewidth = 1) +
+  labs(
+    title = "Three possible priors for the benchmark probability",
+    x = "Benchmark probability",
+    y = "Density"
+  )
+```
+
+After observing 21 successes out of 30, the posterior for a beta-binomial model is:
+
+```text
+theta | data ~ Beta(a + successes, b + failures)
+```
+
+```{r}
+failures <- n - successes
+
+posterior_grid <- tibble(
+  theta = theta_grid,
+  weak = dbeta(theta, 1 + successes, 1 + failures),
+  skeptical = dbeta(theta, 4 + successes, 6 + failures),
+  optimistic = dbeta(theta, 8 + successes, 3 + failures)
+)
+
+posterior_grid |>
+  pivot_longer(-theta, names_to = "prior", values_to = "density") |>
+  ggplot(aes(theta, density, color = prior)) +
+  geom_line(linewidth = 1) +
+  labs(
+    title = "Posterior distributions after observing the data",
+    x = "Benchmark probability",
+    y = "Density"
+  )
+```
+
+## Posterior Summaries
+
+```{r}
+summarise_beta <- function(a, b) {
+  tibble(
+    mean = a / (a + b),
+    lower_95 = qbeta(0.025, a, b),
+    upper_95 = qbeta(0.975, a, b),
+    prob_above_60 = 1 - pbeta(0.60, a, b),
+    prob_above_70 = 1 - pbeta(0.70, a, b)
+  )
+}
+
+bind_rows(
+  weak = summarise_beta(1 + successes, 1 + failures),
+  skeptical = summarise_beta(4 + successes, 6 + failures),
+  optimistic = summarise_beta(8 + successes, 3 + failures),
+  .id = "prior"
+)
+```
+
+## Interpretation
+
+A Bayesian statement can say:
+
+> Under the weak prior, the posterior mean benchmark probability is about X, with a 95% credible interval from Y to Z. The posterior probability that the benchmark probability exceeds 0.60 is P.
+
+This is different from saying:
+
+> If we repeated the sampling procedure many times, 95% of such intervals would contain the true parameter.
+
+The Bayesian credible interval is a probability statement about the parameter under the model.
+
+## Exercise 1
+
+Change the number of successes from 21 to 18 and then to 25.
+
+For each case:
+
+1. Plot the posterior under the three priors.
+2. Compute the posterior probability that `theta > 0.60`.
+3. Write one sentence explaining how the prior matters when the sample is small.
+
+## Exercise 2
+
+Write the following frequentist-style question as a Bayesian-style question:
+
+> Is the pass rate significantly above 60%?
+
+Use this structure:
+
+```text
+What is the posterior probability that ...
+```
+
+## Takeaway
+
+Bayesian analysis does not remove assumptions. It makes them explicit and updates them with data. The main output is a posterior distribution, which can be summarized in ways that directly answer applied research questions.
+

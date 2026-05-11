@@ -1,0 +1,165 @@
+---
+title: "04 Binary and Ordinal Models"
+subtitle: "Extending Bayesian regression beyond continuous outcomes"
+format:
+  html:
+    toc: true
+    number-sections: true
+execute:
+  warning: false
+  message: false
+---
+
+## Learning Outcomes
+
+By the end of this module, participants should be able to:
+
+1. Explain why binary outcomes require a different likelihood from continuous outcomes.
+2. Fit a Bayesian logistic regression model using `brms`.
+3. Interpret effects using predicted probabilities.
+4. Understand when ordinal models are preferable to treating Likert outcomes as continuous.
+
+## Binary Outcome Scenario
+
+A researcher studies whether teachers adopt a new instructional practice. The outcome is binary: adopted or did not adopt.
+
+```{r}
+library(tidyverse)
+
+adoption <- read_csv("data/teacher_adoption_survey.csv")
+
+adoption |>
+  count(adopted)
+```
+
+## Frequentist Framing
+
+In a frequentist workflow, researchers might fit:
+
+```{r}
+freq_logit <- glm(
+  adopted ~ prior_training + years_experience + school_support,
+  data = adoption,
+  family = binomial()
+)
+
+summary(freq_logit)
+```
+
+The coefficients are on the log-odds scale, which is difficult for many audiences.
+
+## Bayesian Logistic Model
+
+```text
+adopted_i ~ Bernoulli(p_i)
+logit(p_i) = alpha + beta_1 prior_training_i + beta_2 years_experience_i + beta_3 school_support_i
+```
+
+```{r}
+#| eval: false
+library(brms)
+
+adoption_model <- brm(
+  adopted ~ prior_training + years_experience + school_support,
+  data = adoption,
+  family = bernoulli(link = "logit"),
+  prior = c(
+    prior(normal(0, 1.5), class = "Intercept"),
+    prior(normal(0, 1), class = "b")
+  ),
+  backend = "cmdstanr",
+  chains = 4,
+  cores = 4,
+  iter = 2000,
+  seed = 2026
+)
+```
+
+## Interpret With Predicted Probabilities
+
+```{r}
+#| eval: false
+library(tidybayes)
+
+new_teachers <- tibble(
+  prior_training = c(0, 1),
+  years_experience = mean(adoption$years_experience),
+  school_support = 3
+)
+
+predicted_prob <- add_epred_draws(adoption_model, newdata = new_teachers)
+
+predicted_prob |>
+  group_by(prior_training) |>
+  median_qi(.epred)
+```
+
+For applied audiences, predicted probabilities are usually clearer than log-odds.
+
+## Exercise: Binary Outcome
+
+1. Fit the Bayesian logistic model.
+2. Estimate adoption probability for teachers with and without prior training.
+3. Estimate the posterior distribution of the probability difference.
+4. Write a two-sentence result in plain language.
+
+## Ordinal Outcome Scenario
+
+Many social science outcomes are ordinal:
+
+- agreement scales;
+- engagement ratings;
+- satisfaction ratings;
+- perceived usefulness scales.
+
+The dataset `student_engagement_ordinal.csv` contains engagement measured from 1 to 5.
+
+```{r}
+engagement <- read_csv("data/student_engagement_ordinal.csv")
+
+engagement |>
+  count(engagement)
+```
+
+## Cumulative Ordinal Model
+
+For an ordinal response, a cumulative model estimates shifts across ordered categories.
+
+```{r}
+#| eval: false
+ordinal_model <- brm(
+  ordered(engagement) ~ intervention + baseline_motivation + teacher_feedback,
+  data = engagement,
+  family = cumulative(link = "logit"),
+  prior = c(
+    prior(normal(0, 1), class = "b")
+  ),
+  backend = "cmdstanr",
+  chains = 4,
+  cores = 4,
+  iter = 2000,
+  seed = 2026
+)
+```
+
+## Communicating Ordinal Results
+
+For many audiences, report predicted category probabilities.
+
+```{r}
+#| eval: false
+new_students <- tibble(
+  intervention = c(0, 1),
+  baseline_motivation = 3,
+  teacher_feedback = 3
+)
+
+predicted_categories <- posterior_epred(ordinal_model, newdata = new_students)
+```
+
+Interpretation should avoid saying that the intervention "increased engagement by 0.4 Likert points" unless a continuous approximation is deliberately chosen and justified.
+
+## Takeaway
+
+Bayesian models are not limited to linear regression. The same workflow applies across likelihoods: choose a model appropriate for the outcome, specify priors, fit, check, and communicate results on a scale that answers the applied question.
+

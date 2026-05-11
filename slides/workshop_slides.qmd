@@ -1,0 +1,172 @@
+---
+title: "Bayesian Analysis for Applied Social Science and Education Research"
+subtitle: "Two-day hands-on workshop"
+format:
+  revealjs:
+    theme: simple
+    slide-number: true
+    chalkboard: true
+execute:
+  echo: false
+---
+
+## Workshop Aim
+
+Move from frequentist significance decisions to Bayesian model-based reasoning.
+
+By the end, participants should be able to:
+
+- specify priors;
+- fit Bayesian regression models;
+- interpret posterior distributions;
+- check models;
+- report Bayesian findings clearly.
+
+## What This Workshop Is Not
+
+- Not an introductory statistics course.
+- Not a raw Stan programming course.
+- Not a philosophical debate about probability.
+
+It is a practical workflow for applied research.
+
+## The Core Bayesian Move
+
+```text
+posterior proportional to likelihood x prior
+```
+
+Data update uncertainty.
+
+The posterior distribution is the main inferential output.
+
+## Frequentist Question
+
+How unusual are these data under a null model?
+
+## Bayesian Question
+
+Given the data and model assumptions, what do we now believe about the unknown quantity?
+
+## Why Applied Researchers Care
+
+Bayesian analysis helps with:
+
+- small samples;
+- hierarchical data;
+- practical thresholds;
+- prior evidence;
+- direct uncertainty statements;
+- cumulative research programs.
+
+## Day 1
+
+1. Bayesian reasoning.
+2. Bayes' rule as learning.
+3. Priors and prior predictive checks.
+4. Bayesian linear regression.
+
+## Day 2
+
+1. Hierarchical models.
+2. Model checking.
+3. Binary and ordinal models.
+4. Reporting Bayesian results.
+5. Participant analysis planning.
+
+## Priors
+
+A prior is part of the model.
+
+Good priors are:
+
+- explicit;
+- justified;
+- checked;
+- reported.
+
+## Prior Predictive Check
+
+Ask:
+
+> If this prior were true, what kinds of data could the model generate?
+
+If the answer is implausible, revise the prior or model.
+
+## Regression Reframing
+
+Frequentist:
+
+> Is the coefficient statistically significant?
+
+Bayesian:
+
+> What is the posterior distribution of the coefficient?
+
+> What is the probability the effect exceeds a meaningful threshold?
+
+## Practical Thresholds
+
+Example:
+
+```text
+Pr(intervention effect > 3 points | data)
+```
+
+This is often more useful than asking whether an effect is merely non-zero.
+
+## Hierarchical Models
+
+Education and social science data are often nested:
+
+- students within schools;
+- teachers within districts;
+- repeated observations within people.
+
+Bayesian hierarchical models estimate group variation while stabilizing noisy group estimates.
+
+## Partial Pooling
+
+No pooling:
+
+> Each group stands alone.
+
+Complete pooling:
+
+> Groups are ignored.
+
+Partial pooling:
+
+> Groups are estimated while sharing information.
+
+## Model Checking
+
+A fitted model is not automatically credible.
+
+Check:
+
+- R-hat;
+- effective sample size;
+- divergences;
+- trace plots;
+- posterior predictive checks;
+- sensitivity to priors.
+
+## Reporting
+
+Use language like:
+
+> The posterior probability that the intervention improved scores was 0.98.
+
+> The probability that the effect exceeded the practical threshold was 0.73.
+
+## Final Output
+
+Each participant leaves with:
+
+- one Bayesian analysis plan;
+- one prior justification;
+- one posterior interpretation;
+- one reporting paragraph;
+- one model-checking checklist.
+

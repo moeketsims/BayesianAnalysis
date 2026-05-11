@@ -1,0 +1,43 @@
+project:
+  type: website
+  execute-dir: project
+
+website:
+  title: "Bayesian Analysis Workshop"
+  navbar:
+    left:
+      - href: index.qmd
+        text: Home
+      - text: Notebooks
+        menu:
+          - href: notebooks/01_bayesian_reasoning.qmd
+            text: "01 Bayesian Reasoning"
+          - href: notebooks/02_priors.qmd
+            text: "02 Priors"
+          - href: notebooks/03_bayesian_regression.qmd
+            text: "03 Regression"
+          - href: notebooks/04_binary_and_ordinal_models.qmd
+            text: "04 Binary and Ordinal Models"
+          - href: notebooks/05_hierarchical_models.qmd
+            text: "05 Hierarchical Models"
+          - href: notebooks/06_model_checking.qmd
+            text: "06 Model Checking"
+          - href: notebooks/07_reporting.qmd
+            text: "07 Reporting"
+      - href: setup/install_guide.md
+        text: Setup
+      - href: facilitator-guide/facilitator_guide.md
+        text: Facilitator Guide
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+    number-sections: true
+    code-fold: false
+    code-tools: true
+
+execute:
+  freeze: auto
+  warning: false
+  message: false

@@ -1,0 +1,64 @@
+---
+title: "Module Title"
+subtitle: "Bayesian Analysis Workshop"
+format:
+  html:
+    toc: true
+    number-sections: true
+execute:
+  warning: false
+  message: false
+---
+
+## Learning Outcomes
+
+By the end of this module, participants should be able to:
+
+1. ...
+2. ...
+3. ...
+
+## Research Scenario
+
+State the applied research problem in social science or education language.
+
+## Frequentist Framing
+
+Show how participants would usually analyze or interpret the question.
+
+## Bayesian Reframing
+
+Translate the question into likelihood, prior, and posterior terms.
+
+## Model
+
+Specify the model in words, notation, and R code.
+
+## Prior
+
+Explain the prior choices and check their implications.
+
+## Fit
+
+Fit the model or inspect a precomputed fit.
+
+## Interpret
+
+Interpret posterior estimates, credible intervals, posterior probabilities, and practical thresholds.
+
+## Check
+
+Use posterior predictive checks and diagnostics.
+
+## Report
+
+Write a short methods or results paragraph.
+
+## Practice
+
+Complete the participant task.
+
+## Takeaway
+
+Summarize the main idea in two or three sentences.
+
