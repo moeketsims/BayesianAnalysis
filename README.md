@@ -267,7 +267,9 @@ The site is hosted on AWS: a private S3 bucket (`bayesian-analysis-workshop-2085
 
 ### Re-publish after edits
 
-From the project root:
+Pushes to `main` automatically render and publish via GitHub Actions (`.github/workflows/deploy.yml`), so the usual workflow is just to commit and push. The Action authenticates to AWS via OIDC — no static credentials are stored in the repo.
+
+For local previews or out-of-band publishing, run from the project root:
 
 ```bash
 scripts/deploy.sh
@@ -275,7 +277,7 @@ scripts/deploy.sh
 
 The script renders the Quarto site, syncs `_site/` to S3, and invalidates CloudFront so visitors see the latest version within a few minutes. Pass `--skip-render` to publish without re-rendering.
 
-Required: `quarto`, `aws` CLI configured under the `default` profile, and R with the workshop packages installed.
+Required for local use: `quarto`, `aws` CLI configured under the `default` profile, and R with the workshop packages installed.
 
 Costs at workshop traffic volumes sit under $1/month: CloudFront's free tier covers the first 1 TB/month of egress, and S3 storage at 11 MiB is negligible.
 
