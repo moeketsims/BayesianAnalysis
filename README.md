@@ -4,11 +4,21 @@
 
 The materials are packaged as a Quarto website with participant notebooks, teaching datasets, facilitator notes, slides, and reporting templates.
 
+## Live Site
+
+The rendered workshop is hosted on AWS at:
+
+**<https://d1etjt8tsng564.cloudfront.net/>**
+
+Participants can read the full notebooks online without installing anything. The local installation steps below remain required for running the R chunks interactively.
+
 ## Quick Start
 
 Follow these steps to run the workshop materials locally.
 
 ### 1. Clone the Repository
+
+**Windows users:** clone to a short path **outside OneDrive**, for example `C:\workshops\` or `$HOME\` (not `$HOME\Documents\` if your Documents folder is synced to OneDrive). OneDrive sync locks and long paths can break Stan model compilation later.
 
 ```powershell
 git clone https://github.com/moeketsims/BayesianAnalysis.git
@@ -21,22 +31,25 @@ If you already have the repository locally, move into the folder where you saved
 cd "path\to\BayesianAnalysis"
 ```
 
-For example, if you cloned it into your Documents folder, the command might be:
+For example:
 
 ```powershell
-cd "$HOME\Documents\BayesianAnalysis"
+cd "C:\workshops\BayesianAnalysis"
 ```
 
 ### 2. Install Required Software
 
-Install these first:
+Install in this order:
 
 1. **R**: <https://cran.r-project.org/>
-2. **Quarto**: <https://quarto.org/docs/get-started/>
-3. **RStudio** or **Positron**: recommended for working with the notebooks.
-4. **Node.js**: optional, only needed if you want to regenerate or validate the synthetic datasets.
+2. **RTools (Windows only)**: <https://cran.r-project.org/bin/windows/Rtools/>
+   - RTools is the C++ toolchain Stan needs to compile Bayesian models. Without it, model fitting fails on Windows.
+   - **The RTools version must match your R version**: RTools43 for R 4.3.x, RTools44 for R 4.4.x, RTools45 for R 4.5.x. Installing the wrong version will not work.
+3. **Quarto**: <https://quarto.org/docs/get-started/>
+4. **RStudio** or **Positron**: recommended for working with the notebooks.
+5. **Node.js**: optional, only needed if you want to regenerate or validate the synthetic datasets.
 
-Check that R and Quarto are available:
+After installing the above on Windows, close and reopen PowerShell so the new programs are available on your PATH. Then check:
 
 ```powershell
 Rscript --version
@@ -54,14 +67,14 @@ Rscript setup/packages.R
 This installs the main packages used in the workshop, including:
 
 - `brms`
-- `cmdstanr`
+- `cmdstanr` (installed from the Stan r-universe repository — not on CRAN)
 - `tidyverse`
 - `tidybayes`
 - `bayesplot`
 - `posterior`
 - `loo`
 
-Bayesian modeling with `brms` uses Stan, so installation can take time.
+The script then runs `cmdstanr::install_cmdstan()` to install the underlying Stan toolchain. On Windows this step requires RTools (Step 2). Bayesian modeling with `brms` uses Stan, so the full install can take 10–20 minutes.
 
 ### 4. Test the R Setup
 
@@ -248,6 +261,24 @@ Day 2:
 - [Reporting templates](reporting-templates/bayesian_reporting_templates.md)
 - [Slides](slides/workshop_slides.qmd)
 
+## Deployment
+
+The site is hosted on AWS: a private S3 bucket (`bayesian-analysis-workshop-208509455458` in `us-east-1`) fronted by a CloudFront distribution (`EOET36EGUHLUZ`). The bucket policy grants read access only to that distribution via Origin Access Control, so the bucket itself stays unreachable.
+
+### Re-publish after edits
+
+From the project root:
+
+```bash
+scripts/deploy.sh
+```
+
+The script renders the Quarto site, syncs `_site/` to S3, and invalidates CloudFront so visitors see the latest version within a few minutes. Pass `--skip-render` to publish without re-rendering.
+
+Required: `quarto`, `aws` CLI configured under the `default` profile, and R with the workshop packages installed.
+
+Costs at workshop traffic volumes sit under $1/month: CloudFront's free tier covers the first 1 TB/month of egress, and S3 storage at 11 MiB is negligible.
+
 ## Development Status
 
-This repository contains the first complete source package. The next recommended step is to render the Quarto site on a machine with R and Quarto installed, then pilot Notebook 01 with a small group.
+This repository contains the first complete source package and is live online via the URL above. The next recommended step is to pilot Notebook 01 with a small group.
