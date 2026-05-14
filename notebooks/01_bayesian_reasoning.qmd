@@ -21,6 +21,8 @@ By the end of this module, participants should be able to:
 
 ## The Shift
 
+Most applied researchers learn to test a null hypothesis and report a p-value. The question this answers is, in practice, narrower than the question the research is actually asking. A study on a reading intervention is asking whether the intervention raises pass rates in the population that matters. A null-hypothesis test answers something different: how surprising the observed data would be under a model that says the effect is zero. The two are not the same question, and slipping between them is the source of much of the misinterpretation that crowds applied research reports.
+
 Frequentist analysis usually asks:
 
 > How unusual would these data, or more extreme data, be if a null model were true?
@@ -29,13 +31,27 @@ Bayesian analysis asks:
 
 > Given the data and the model assumptions, what do we now believe about the unknown quantity?
 
-For applied researchers, the second question is often closer to the real research question.
+The second question is closer to what most research reports actually want to claim. Journal articles routinely translate p-values into probability statements about effects, writing things like "the intervention probably works," but the p-value does not support that translation. Bayesian inference does. The price is that the assumptions, including prior beliefs, become explicit and must be defended. That trade is the substance of this workshop.
+
+## What the P-value Actually Says
+
+The previous section made the contrast at the level of paradigms. The p-value itself deserves a closer look, because the misreadings tend to compound rather than cancel.
+
+A p-value is a probability statement about the data, not about the parameter. Given a null hypothesis that says some quantity (a mean difference, a regression coefficient, a proportion) equals a specified value, almost always zero, the p-value is the probability of observing data at least as extreme as what was seen if the null were true. The convention in applied social science compares this probability against a significance level of 0.05, not 0.5. The ladder below is informal but useful:
+
+- p = 0.50: the observed data are entirely ordinary under the null. No reason for surprise.
+- p = 0.20: the data are not especially unusual under the null.
+- p = 0.08: the data are somewhat suggestive but do not meet the conventional threshold.
+- p = 0.03: the data are relatively unusual under the null; researchers begin to doubt the no-effect assumption.
+- p = 0.001: the data are very unusual under the null.
+
+The careful phrasing matters. When p < 0.05 the correct sentence is "the observed data are unusual under the assumption of no effect," not "the effect is unusual." The first is what the test actually computes. The second slides into a probability statement about the parameter, which the frequentist machinery does not license. In regression the p-value attached to a coefficient is the p-value for a hypothesis test about that coefficient, almost always the test of whether it equals zero. The probability statement still lives on the data side, not the parameter side.
+
+A small p-value is therefore evidence against a specific null hypothesis. It is not, on its own, evidence that an effect is large, or that the study was well designed, or that the relationship is causal. A statistically significant difference in a small sample may correspond to a substantively trivial effect. A non-significant difference in a small sample may correspond to a real effect the study lacked the power to detect. For non-experimental designs, even a small p-value warrants the language of association rather than effect. The Bayesian framing developed in the rest of this notebook does not erase these concerns. It changes the kind of statement the inferential output supports: the posterior is a probability statement directly about the parameter, conditional on the model and the priors, which is the statement applied research most often wants to make.
 
 ## Familiar Example
 
-Suppose an education researcher pilots a new reading support program with 30 learners. After the program, 21 learners reach a defined proficiency benchmark.
-
-The raw observed proportion is:
+Consider a small but realistic case. An education researcher pilots a new reading support program with 30 learners. After the program, 21 of them reach a defined proficiency benchmark. The headline figure is the observed proportion:
 
 ```{r}
 successes <- 21
@@ -43,11 +59,15 @@ n <- 30
 successes / n
 ```
 
-A frequentist analysis might report a confidence interval for the proportion. A Bayesian analysis treats the true benchmark probability as uncertain and estimates a posterior distribution for it.
+So 0.7 of the piloted learners reached the benchmark. The applied question, though, is rarely about these 30 learners. It is about what would happen if the program were rolled out to the larger population the researcher works with. Two distinct questions are now in play. What is the true probability a learner from that population reaches the benchmark under this program? And how confident should we be in any particular value for that probability given only 30 observations?
+
+A frequentist analysis answers these with a point estimate and a confidence interval. The point estimate is 0.7. The 95% confidence interval, computed under one of several procedures, will span roughly 0.51 to 0.85, and is interpreted as a procedure that would contain the true value 95% of the time across repeated identical studies. It is not a probability statement about the actual benchmark probability in this study.
+
+A Bayesian analysis answers them differently. It treats the unknown benchmark probability as a quantity about which we hold beliefs that data can update. The result is a posterior distribution: a probability statement directly about the parameter, conditional on the data and the modeling assumptions. The rest of this notebook walks through how that update happens, using the same 21-out-of-30 case throughout.
 
 ## Bayes' Rule
 
-The central relationship is:
+The whole of Bayesian inference reduces to one relationship:
 
 ```text
 posterior proportional to likelihood x prior
@@ -61,21 +81,29 @@ p(theta | data) proportional to p(data | theta) x p(theta)
 
 Where:
 
-- `theta` is the unknown quantity;
-- `p(theta)` is the prior;
-- `p(data | theta)` is the likelihood;
-- `p(theta | data)` is the posterior.
+- `theta` is the unknown quantity, in this example the true benchmark probability;
+- `p(theta)` is the prior, a probability distribution over plausible values of `theta` before the data are seen;
+- `p(data | theta)` is the likelihood, the probability of the observed data given a candidate value of `theta`;
+- `p(theta | data)` is the posterior, the updated distribution over `theta` after the data are accounted for.
+
+It pays to slow down on each piece in the running example. The likelihood is not a function of the data; it is a function of `theta`. Given 21 successes out of 30, the likelihood asks: how plausible is each candidate value of `theta`, judged by how well it would have produced these 21 successes? If `theta` is 0.1 the data are extremely unlikely. If `theta` is 0.7 the data are very likely. If `theta` is 0.95 the data are unlikely again because 21 out of 30 is too low. The likelihood traces this plausibility across all values of `theta` between 0 and 1.
+
+The prior carries the researcher's beliefs about `theta` before this study. A prior centered at 0.5 with substantial spread says the researcher had no strong expectation, only a sense that the true probability is somewhere in the middle of the scale. A prior heavily concentrated at 0.8 says the researcher believed strongly, before seeing data, that the program would work very well. The prior is part of the model and must be defensible. It is not a fudge factor.
+
+The word "proportional" in the rule is doing real work. The product of the prior and the likelihood gives the shape of the posterior. The actual posterior is rescaled so it integrates to one, which makes it a proper probability distribution. For applied work, the shape is what matters; the scaling constant takes care of itself.
 
 ## A Binomial Updating Example
 
-For a proportion, a convenient teaching model is:
+For a proportion bounded between 0 and 1, the standard teaching model is the beta-binomial:
 
 ```text
 successes ~ Binomial(n, theta)
 theta ~ Beta(a, b)
 ```
 
-The beta prior is useful because it is defined between 0 and 1.
+The beta prior is convenient for one reason and pedagogically useful for another. The convenient reason is mathematical: the beta is the conjugate prior for the binomial likelihood, so the posterior is also a beta distribution with parameters that can be written down in closed form. The pedagogical reason is more important. The two shape parameters of the beta, `a` and `b`, have an intuitive reading: they can be thought of as a number of prior successes and a number of prior failures the researcher would notionally count before seeing the new data. A `Beta(4, 6)` prior carries the weight of 10 prior trials with 4 notional successes, which is a mild prior that leans slightly skeptical. A `Beta(8, 3)` prior carries the weight of 11 prior trials with 8 notional successes, an optimistic prior consistent with prior evidence that the program works well. A `Beta(1, 1)` prior corresponds to no prior trials and is flat on (0, 1): it expresses uniform initial uncertainty across the full range.
+
+The three priors below cover these positions:
 
 ```{r}
 library(tidyverse)
@@ -99,6 +127,8 @@ prior_grid |>
     y = "Density"
   )
 ```
+
+Three different stories about what is plausible before the data. The weak prior is flat: every value of `theta` between 0 and 1 is equally plausible a priori. The skeptical prior peaks below 0.5 and tapers toward the extremes, encoding a researcher who would be surprised if the program produced a very high pass rate. The optimistic prior peaks well above 0.5, encoding a researcher who has reason to expect that the program works well. None of these priors is right or wrong on its own. They are different starting positions that produce different posteriors when combined with the same data.
 
 After observing 21 successes out of 30, the posterior for a beta-binomial model is:
 
@@ -127,6 +157,10 @@ posterior_grid |>
   )
 ```
 
+The three posteriors are far more similar than the three priors. This is the point. With 30 observations and 21 successes, the data pulls all three posteriors toward the same neighbourhood, somewhere between 0.6 and 0.75. The optimistic posterior sits slightly to the right of the others, because the optimistic prior added notional successes to the count. The skeptical posterior sits slightly to the left for the symmetric reason. The weak prior contributed almost no information, so its posterior is closest to the raw data: 21 successes and 9 failures.
+
+This is the central mechanic of Bayesian updating. The prior and the data each pull on the posterior, and the relative weight of each depends on how informative each is. With 30 observations, the priors used here barely move the conclusion. With 3 observations, the same priors would dominate.
+
 ## Posterior Summaries
 
 ```{r}
@@ -148,17 +182,21 @@ bind_rows(
 )
 ```
 
+Read this table column by column. The posterior mean under the weak prior is close to 0.69, very near the raw 0.70 the data implied. The skeptical prior pulls the posterior mean down to roughly 0.63, because the skeptical prior added more notional failures than successes. The optimistic prior pulls it up to about 0.71. The 95% credible intervals are wide because 30 is a small sample: the data simply does not pin `theta` down to a narrow range, regardless of which prior was used.
+
+The two probability columns matter most for applied reporting. `prob_above_60` and `prob_above_70` answer questions a frequentist analysis cannot answer directly: what is the posterior probability that the true benchmark probability exceeds 0.60, or 0.70? Under the weak prior the answer to the first is roughly 0.86, meaning that after seeing the data the researcher should assign about an 86% probability to the claim that the program reaches at least 60% of learners. This is the kind of statement applied research often wants to make and which Bayesian inference licenses directly.
+
 ## Interpretation
 
-A Bayesian statement can say:
+A Bayesian results sentence using the weak-prior row of the table above might read:
 
-> Under the weak prior, the posterior mean benchmark probability is about X, with a 95% credible interval from Y to Z. The posterior probability that the benchmark probability exceeds 0.60 is P.
+> Under a weakly informative prior, the posterior mean benchmark probability was 0.69, with a 95% credible interval from 0.52 to 0.83. The posterior probability that the benchmark probability exceeds 0.60 was 0.86.
 
-This is different from saying:
+Notice what the credible interval is and is not. It is a probability statement about `theta`: under the model, there is a 95% probability that the true benchmark probability lies between 0.52 and 0.83. It is not the following frequentist statement:
 
 > If we repeated the sampling procedure many times, 95% of such intervals would contain the true parameter.
 
-The Bayesian credible interval is a probability statement about the parameter under the model.
+The two statements are routinely confused, including in articles that report only confidence intervals. Bayesian inference, by contrast, returns the probability statement directly. Applied audiences usually find this easier to interpret. The cost, again, is that the prior is now part of the model and must be reported and defended.
 
 ## Exercise 1
 
@@ -184,5 +222,5 @@ What is the posterior probability that ...
 
 ## Takeaway
 
-Bayesian analysis does not remove assumptions. It makes them explicit and updates them with data. The main output is a posterior distribution, which can be summarized in ways that directly answer applied research questions.
+Bayesian analysis does not remove assumptions. It makes them explicit and updates them with data. The main output is a posterior distribution, and the same distribution can be summarised in several ways depending on the question being asked: a posterior mean, a 95% credible interval, a posterior probability that the parameter exceeds a substantive threshold. The cost of this clarity is that the prior is now part of the model, and the rest of the workshop builds the discipline needed to choose, check, and defend it.
 

@@ -21,7 +21,7 @@ By the end of this module, participants should be able to:
 
 ## Binary Outcome Scenario
 
-A researcher studies whether teachers adopt a new instructional practice. The outcome is binary: adopted or did not adopt.
+Many applied research outcomes are not continuous. A researcher studies whether teachers adopt a new instructional practice; the outcome is binary, recording only whether each teacher adopted or did not adopt. Treating this outcome as if it were continuous and running a linear regression would produce predicted probabilities outside the 0-to-1 interval and would mis-state the uncertainty. A different likelihood is needed.
 
 ```{r}
 library(tidyverse)
@@ -32,28 +32,57 @@ adoption |>
   count(adopted)
 ```
 
+The count table shows the raw adoption rate. Across the sample, the marginal proportion of adopters is the first piece of context for everything that follows: it sets the scale on which the intercept of any logistic model will be interpreted, and it tells the researcher whether the dataset has enough events to estimate predictor effects with any precision. A sample with 95% adoption gives almost no information about what predicts non-adoption.
+
 ## Frequentist Framing
 
-In a frequentist workflow, researchers might fit:
+The frequentist baseline is a logistic regression fitted with `glm()`. This model assumes the outcome follows a Bernoulli distribution and links the linear predictor to the probability of adoption through the logit function. Fitting it first gives a reference point and exposes the interpretive difficulty that motivates moving to predicted probabilities later.
 
 ```{r}
+library(broom)
+
 freq_logit <- glm(
   adopted ~ prior_training + years_experience + school_support,
   data = adoption,
   family = binomial()
 )
 
-summary(freq_logit)
+# Coefficient table on the log-odds scale
+freq_logit |>
+  tidy(conf.int = TRUE) |>
+  mutate(across(where(is.numeric), \(x) round(x, 3)))
 ```
 
-The coefficients are on the log-odds scale, which is difficult for many audiences.
+```{r}
+# Coefficients exponentiated to the odds-ratio scale
+freq_logit |>
+  tidy(conf.int = TRUE, exponentiate = TRUE) |>
+  mutate(across(where(is.numeric), \(x) round(x, 3)))
+```
+
+```{r}
+# Model-level fit statistics
+freq_logit |>
+  glance() |>
+  mutate(across(where(is.numeric), \(x) round(x, 3)))
+```
+
+Three tables, three different summaries of the same model. The first reports coefficients on the log-odds scale, which is the natural scale of the linear predictor but is not a scale most readers can intuit. A log-odds of 0.6 sounds technical even to many quantitative researchers. The second table exponentiates the coefficients to the odds-ratio scale; an odds ratio of 1.8 for `prior_training` means teachers with prior training have 1.8 times the odds of adoption compared with teachers without. Odds ratios are familiar but still routinely misread as risk ratios or as multiplicative effects on probability. The third table is the model-level fit, reporting null and residual deviance and AIC; useful for comparison but not the substantive answer the research is seeking.
+
+Each p-value in the two coefficient tables tests whether the corresponding coefficient equals zero on the log-odds scale, which is equivalent to whether the odds ratio equals one. A small p-value next to an odds ratio of 1.8 means estimates this far from one would be unlikely if the true odds ratio were exactly one. It does not mean the true odds ratio is probably 1.8, and it does not license probability statements about the size of the effect. As in linear regression, the probability statement lives on the data side, not on the parameter.
+
+The interpretive problem is real. Even after the second table, the analyst still has to translate odds into something the policy audience can act on. The Bayesian model below addresses the same data, but, more importantly, the workflow it enables ends in predicted probabilities rather than odds. That is the move that matters for applied reporting.
 
 ## Bayesian Logistic Model
+
+The Bayesian version uses the same structural form as the frequentist `glm`:
 
 ```text
 adopted_i ~ Bernoulli(p_i)
 logit(p_i) = alpha + beta_1 prior_training_i + beta_2 years_experience_i + beta_3 school_support_i
 ```
+
+The priors must be specified on the log-odds scale, which is where most newcomers find logistic-regression priors counter-intuitive. A standard normal prior `Normal(0, 1)` on a coefficient sounds restrictive, but on the log-odds scale it allows odds ratios from roughly 0.14 to 7.4 within two standard deviations, which is far wider than most realistic effects in social-science settings. The `Normal(0, 1.5)` prior on the intercept allows the baseline probability to range across most of (0, 1), which is appropriate when the marginal adoption rate is not strongly anchored a priori. As with the linear-regression case, these priors are chosen on the scale of the model and can be challenged on substantive grounds: a reviewer who thinks a coefficient as large as 3 in log-odds is implausible has a specific number to argue with.
 
 ```{r}
 #| eval: false
@@ -77,6 +106,8 @@ adoption_model <- brm(
 
 ## Interpret With Predicted Probabilities
 
+The interpretive payoff for going Bayesian on logistic regression is the ease with which posterior draws can be propagated through the inverse-logit transformation to yield predicted probabilities, complete with credible intervals. The next chunk takes two hypothetical teachers, identical in years of experience and school support but differing in prior training, and asks the posterior what adoption probability each one implies.
+
 ```{r}
 #| eval: false
 library(tidybayes)
@@ -94,7 +125,9 @@ predicted_prob |>
   median_qi(.epred)
 ```
 
-For applied audiences, predicted probabilities are usually clearer than log-odds.
+The table now reports the median posterior adoption probability for each teacher type, with a credible interval, on the 0-to-1 scale. A statement like "teachers with prior training have a posterior median adoption probability of 0.68 (95% CrI 0.54 to 0.81), compared with 0.41 (95% CrI 0.28 to 0.55) for teachers without" is immediately usable in a policy brief. A statement like "the odds ratio for prior training is 3.1" is not, even though it carries the same information.
+
+The deeper point is that predicted probabilities are not just a presentation device. The posterior distribution of the probability difference between the two teacher types can itself be summarised: its posterior mean, its credible interval, and the probability that the difference exceeds a policy-relevant threshold are all straightforward calculations on the draws. This is the same flexibility that made the continuous-outcome model in notebook 03 so useful, applied here on the natural scale of the binary outcome.
 
 ## Exercise: Binary Outcome
 
@@ -105,14 +138,9 @@ For applied audiences, predicted probabilities are usually clearer than log-odds
 
 ## Ordinal Outcome Scenario
 
-Many social science outcomes are ordinal:
+Many social-science outcomes sit between binary and continuous. Agreement scales, engagement ratings, satisfaction ratings, and perceived-usefulness scales are all ordered categorical variables: their levels have a meaningful order, but the distances between levels are not necessarily equal. Treating a 1-to-5 Likert item as if it were continuous is common practice and almost always wrong on careful inspection. The difference between "1" and "2" on a satisfaction scale is rarely the same psychological quantity as the difference between "4" and "5," and the linear model assumes it is.
 
-- agreement scales;
-- engagement ratings;
-- satisfaction ratings;
-- perceived usefulness scales.
-
-The dataset `student_engagement_ordinal.csv` contains engagement measured from 1 to 5.
+The dataset `student_engagement_ordinal.csv` contains an engagement variable measured on a 1-to-5 scale, with predictors for an intervention, baseline motivation, and a teacher feedback rating.
 
 ```{r}
 engagement <- read_csv("data/student_engagement_ordinal.csv")
@@ -121,9 +149,11 @@ engagement |>
   count(engagement)
 ```
 
+The count table gives the distribution across categories. Sparse cells are the most important thing to look for: an ordinal model can be fitted to a variable where one category has only a handful of observations, but the cutpoint estimates for that category will be highly uncertain. If category 5 has 3 observations out of 200, the analyst should consider whether to collapse adjacent categories before modeling.
+
 ## Cumulative Ordinal Model
 
-For an ordinal response, a cumulative model estimates shifts across ordered categories.
+The cumulative-logit model is the standard ordinal model and the one `brms` uses by default. Conceptually, the model imagines an underlying latent continuous variable that the observed ordinal response is a coarse measurement of. The model estimates a single slope for each predictor on this latent scale, plus a set of cutpoints that divide the latent scale into the observed categories. The same slope applies across all category transitions, which is the proportional-odds assumption. It is restrictive but often defensible; relaxing it produces a more complex model that the workshop does not cover.
 
 ```{r}
 #| eval: false
@@ -144,7 +174,7 @@ ordinal_model <- brm(
 
 ## Communicating Ordinal Results
 
-For many audiences, report predicted category probabilities.
+The same translation principle from the logistic model applies, with one extra step. The coefficients of the cumulative model are on the log-odds scale and apply across category transitions; reporting them directly is not useful for most audiences. The recommended reporting strategy is to derive predicted category probabilities for substantively meaningful cases. For an intervention study on engagement, this typically means showing the predicted probability of each engagement level for treatment versus control students, at average covariate values.
 
 ```{r}
 #| eval: false
@@ -157,9 +187,9 @@ new_students <- tibble(
 predicted_categories <- posterior_epred(ordinal_model, newdata = new_students)
 ```
 
-Interpretation should avoid saying that the intervention "increased engagement by 0.4 Likert points" unless a continuous approximation is deliberately chosen and justified.
+A common reporting mistake is to convert the ordinal output back into a continuous summary, with statements like "the intervention increased engagement by 0.4 Likert points." This collapses the ordered-categorical information back into a continuous claim and discards the structure the ordinal model was used to preserve. The defensible alternative is to state predicted probabilities directly: "the intervention raised the posterior probability of a 4-or-5 engagement rating from 0.34 to 0.51." That sentence is harder to write than the linear one, and it is also more honest about what the model can support.
 
 ## Takeaway
 
-Bayesian models are not limited to linear regression. The same workflow applies across likelihoods: choose a model appropriate for the outcome, specify priors, fit, check, and communicate results on a scale that answers the applied question.
+Bayesian models are not limited to linear regression. The same workflow applies across likelihoods: choose a model appropriate for the outcome, specify priors on the natural scale of the model, fit, check, and communicate results on a scale that answers the applied question. Predicted probabilities for binary outcomes, and predicted category probabilities for ordinal ones, are usually the right communication device. The choice of likelihood is a substantive choice about the kind of data being modeled, and treating an ordinal outcome as continuous is the most common way researchers paper over that choice.
 

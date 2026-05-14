@@ -22,24 +22,27 @@ By the end of this module, participants should be able to:
 
 ## What Bayesian Reporting Must Include
 
-A Bayesian report should usually include:
+A Bayesian analysis has more moving parts than the standard frequentist regression report most journals expect. Skipping any of those parts produces a report that another researcher cannot evaluate or reproduce. The expectations have stabilised over the last decade and are now reasonably standard across applied fields.
 
-- model likelihood and link function;
-- outcome and predictors;
-- prior distributions and justification;
-- software and sampler details;
-- convergence diagnostics;
-- posterior summaries;
-- posterior predictive checks;
-- sensitivity analysis where priors may affect conclusions.
+A complete Bayesian report should include the model likelihood and link function, so the reader knows which family of distributions was assumed for the outcome; the outcome and predictors, with their measurement scales; the prior distributions and the substantive justification for each one, not merely a list of distributions; the software and sampler details, including the package version and the number of chains and iterations; the convergence diagnostics (R-hat, effective sample size, divergent transitions); the posterior summaries (means, credible intervals, posterior probabilities for substantive thresholds); the posterior predictive checks that confirm the model describes the data adequately; and the sensitivity analysis showing how the conclusion depends, if at all, on the choice of priors.
+
+This is more than most frequentist reports include, and the additional length is the point. A reader of a Bayesian report should be able to inspect every modeling decision, agree or disagree with each one explicitly, and reach an independent judgment about whether the posterior supports the substantive claim. The templates below offer the standard form for each of these pieces.
 
 ## Methods Paragraph Template
 
-> We fitted a Bayesian [linear/logistic/ordinal/hierarchical] model to estimate [research quantity]. The outcome was [outcome], and predictors included [predictors]. The model used a [likelihood] likelihood with [link if applicable]. Priors were chosen to be [weakly informative/skeptical/informed] on the scale of the model. The intervention coefficient was assigned a [prior] prior because [reason]. Models were fitted in R using `brms` with the CmdStan backend. We assessed convergence using R-hat, effective sample size, trace plots, and posterior predictive checks.
+A methods paragraph for a Bayesian analysis needs to specify the model, the priors, and the computation. The template below covers the standard elements; placeholders in brackets should be filled in with the specific values from the analysis being reported.
+
+> We fitted a Bayesian [linear/logistic/ordinal/hierarchical] model to estimate [research quantity]. The outcome was [outcome], and predictors included [predictors]. The model used a [likelihood] likelihood with [link if applicable]. Priors were chosen to be [weakly informative/skeptical/informed] on the scale of the model. The intervention coefficient was assigned a [prior] prior because [reason]. Models were fitted in R using `brms` with the CmdStan backend, running four chains of 2,000 iterations each, with 1,000 warm-up iterations discarded. We assessed convergence using R-hat, effective sample size, trace plots, and posterior predictive checks.
+
+The crucial element to fill in carefully is the prior justification. "Priors were weakly informative" is not a justification on its own; it is a label. A defensible methods paragraph names the prior, names the scale, and names the substantive reason. For example: "The intervention coefficient was assigned a Normal(0, 10) prior on the score-point scale, centred at no effect and wide enough to include effects up to roughly 20 points either side, which exceeds any plausible educational intervention effect on this 0-to-100 outcome."
 
 ## Results Paragraph Template
 
+A Bayesian results paragraph reports the posterior in a way the substantive reader can act on. The posterior mean and credible interval are the standard quantities, and the posterior probabilities for thresholds of practical importance are the move that distinguishes a Bayesian report from a frequentist one. The template:
+
 > The posterior mean intervention effect was [X], with a 95% credible interval from [L] to [U]. The posterior probability that the effect was positive was [P1]. The posterior probability that the effect exceeded the practical threshold of [T] was [P2]. These results suggest that [substantive interpretation], while uncertainty remains about [uncertainty statement].
+
+The substantive interpretation sentence is doing a lot of work. It should make a specific applied claim ("the intervention almost certainly improves average scores under this model, with moderate but not strong evidence that the improvement is large enough to be substantively meaningful") rather than a vague directional one ("the intervention appears beneficial"). The uncertainty statement should acknowledge where the model is honest about not knowing, for instance whether the effect persists in subgroups the sample size did not allow the model to estimate separately.
 
 ## Prior Reporting Template
 
@@ -52,6 +55,8 @@ A Bayesian report should usually include:
 
 ## Frequentist-to-Bayesian Translation
 
+Most applied audiences will arrive at a Bayesian results paragraph with frequentist habits of mind. The translation below replaces the standard frequentist sentences with their Bayesian equivalents, but the more important shift is what each statement does and does not commit the analyst to.
+
 Instead of:
 
 > The intervention was statistically significant, p < .05.
@@ -59,6 +64,8 @@ Instead of:
 Use:
 
 > The posterior probability that the intervention effect was positive was 0.98, and the probability that it exceeded the pre-specified practical threshold was 0.73.
+
+The first sentence sounds stronger but commits the writer to less. The second sentence makes two specific probability claims that other researchers can challenge by re-running the analysis under different priors, and that policy audiences can act on directly.
 
 Instead of:
 
@@ -68,9 +75,21 @@ Use:
 
 > The posterior distribution remains compatible with both small negative and small positive effects. The probability that the effect exceeds the practical threshold is low, suggesting limited evidence for a substantively important effect under this model.
 
+The Bayesian version avoids the false implication that the effect is zero. "Not significant" is routinely read as "no effect," which is a logical error: a non-significant frequentist result is consistent with effects of any size including substantively important ones. The Bayesian translation reports what the posterior actually shows, which is uncertainty distributed across effect sizes that include both helpful and unhelpful values.
+
+## Causal Language
+
+Posterior probability statements are still inference under a model. They do not on their own license a causal claim. For an experimental design with random assignment, a posterior probability that the effect is positive can be reported as an effect of the intervention. For an observational design, which describes most education and social science studies, the same posterior should be reported as an association rather than an effect, and the language of the results paragraph should reflect this. "The posterior probability that intervention is associated with higher endline scores was 0.98" is the defensible version of "the intervention almost certainly works" when the design does not establish causality. A Bayesian report makes uncertainty more transparent, but it does not upgrade observational evidence to experimental evidence.
+
 ## Sensitivity Statement
 
-> We repeated the analysis using a skeptical prior centered at zero with a smaller standard deviation. The posterior mean was slightly closer to zero, but the probability that the effect was positive remained high. The conclusion that the intervention likely improved scores was therefore not dependent on the weakly informative prior.
+Sensitivity analysis is the strongest defence against the objection that priors can drive conclusions. The strategy is simple: refit the model under a different reasonable prior on the parameter of substantive interest, and report whether the conclusion changes. If the posterior shifts only slightly, the conclusion is robust to the prior choice and the analyst can say so explicitly. If the posterior shifts substantially, the conclusion depends on the prior, and the analyst must defend the choice on substantive grounds or report both results.
+
+A defensible sensitivity statement:
+
+> We repeated the analysis using a skeptical prior centred at zero with a smaller standard deviation. The posterior mean was slightly closer to zero, but the posterior probability that the effect was positive remained above 0.95. The conclusion that the intervention likely improved scores was therefore not dependent on the weakly informative prior.
+
+A more honest sensitivity statement, when the result is in fact prior-dependent, would say so plainly: the posterior under a skeptical prior was substantially closer to zero and the posterior probability of a positive effect dropped to 0.78. That is still useful information, and reporting it lets the reader judge how much weight the conclusion can bear.
 
 ## Figure Guidance
 
@@ -112,5 +131,5 @@ Plain-language conclusion
 
 ## Takeaway
 
-Bayesian reporting should make uncertainty more transparent, not more obscure. The best reports connect posterior quantities directly to the research decision or substantive claim.
+Bayesian reporting should make uncertainty more transparent, not more obscure. The best reports connect posterior quantities directly to the research decision or substantive claim, document every modeling choice the reader needs to evaluate the result, and use the natural scale of the outcome rather than transformed quantities the policy audience cannot interpret. The discipline this requires is real, and it is the same discipline that makes the conclusions defensible. A Bayesian analysis without prior justification, convergence diagnostics, or posterior predictive checks is not a Bayesian analysis any reviewer should accept. A Bayesian analysis with all three is harder to write and easier to defend than its frequentist counterpart.
 

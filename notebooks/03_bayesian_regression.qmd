@@ -21,7 +21,9 @@ By the end of this module, participants should be able to:
 
 ## Research Scenario
 
-We estimate whether an education intervention improves endline achievement after adjusting for baseline score and socioeconomic status.
+The research question for this notebook is whether an education intervention improves endline achievement once baseline score and socioeconomic status have been accounted for. The question is familiar to applied researchers because it is exactly the question a linear regression with three predictors normally addresses. What changes is the inferential machinery surrounding it, not the model structure itself.
+
+The same dataset was used in notebook 02 to anchor prior choices. The descriptive summary below is included here as a reminder of the scale on which every coefficient will be interpreted.
 
 ```{r}
 library(tidyverse)
@@ -29,33 +31,71 @@ library(tidyverse)
 education <- read_csv("data/education_intervention.csv")
 
 education |>
-  select(endline_score, intervention, baseline_score, ses_index, attendance_rate) |>
-  summary()
+  select(
+    endline_score,
+    intervention,
+    baseline_score,
+    ses_index,
+    attendance_rate
+  ) |>
+  pivot_longer(everything(), names_to = "variable") |>
+  group_by(variable) |>
+  summarise(
+    n      = n(),
+    mean   = mean(value),
+    sd     = sd(value),
+    min    = min(value),
+    q25    = quantile(value, 0.25),
+    median = median(value),
+    q75    = quantile(value, 0.75),
+    max    = max(value),
+    .groups = "drop"
+  ) |>
+  mutate(across(where(is.numeric) & !n, \(x) round(x, 2)))
 ```
 
 ## Frequentist Baseline
 
+A frequentist linear regression is the natural baseline. Fitting it first is useful for two reasons. It produces familiar numbers that anchor expectations for what the Bayesian model will return, and it makes the inferential difference between the two approaches visible by direct comparison rather than by argument.
+
 ```{r}
+library(broom)
+
 freq_model <- lm(
   endline_score ~ intervention + baseline_score + ses_index,
   data = education
 )
 
-summary(freq_model)
+# Coefficient table
+freq_model |>
+  tidy(conf.int = TRUE) |>
+  mutate(across(where(is.numeric), \(x) round(x, 3)))
 ```
 
-The frequentist output provides a point estimate, standard error, test statistic, p-value, and confidence interval. It does not directly provide the probability that the intervention effect is positive or practically meaningful.
+```{r}
+# Model-level fit statistics
+freq_model |>
+  glance() |>
+  select(r.squared, adj.r.squared, sigma, AIC, BIC, df, nobs) |>
+  mutate(across(where(is.numeric), \(x) round(x, 3)))
+```
+
+Read the coefficient table substantively. The intervention coefficient is the estimated mean difference in endline score between treated and control students after adjusting for baseline and SES. A positive estimate around 4 to 5 points, with a confidence interval that does not include zero, is the kind of result a frequentist analysis would describe as "statistically significant." The baseline coefficient near 0.85 says that a one-point higher baseline score is associated with roughly 0.85 points higher endline, which is the autoregression that dominates this kind of education data. The SES coefficient is smaller and noisier.
+
+Strictly, the p-value next to each coefficient is not a probability statement about that coefficient. It is the probability of seeing an estimate this far from zero, or farther, if the true coefficient were exactly zero. A coefficient of 4.5 with p = 0.03 means an estimate this large or larger would occur only about three times in a hundred samples drawn under a true effect of zero. The asymmetry is small to write but large to interpret: in a frequentist regression the probability statement always lives on the data, never on the parameter.
+
+The frequentist output provides a point estimate, a standard error, a test statistic, a p-value, and a confidence interval for each coefficient. It does not provide the probability that the intervention effect is positive, and it does not provide the probability that the effect exceeds a threshold of practical importance. Those are the quantities applied researchers usually want. The Bayesian model fitted next returns them directly.
 
 ## Bayesian Model
 
-The Bayesian model uses the same likelihood structure:
+The Bayesian model uses exactly the same likelihood structure as the frequentist one:
 
 ```text
 endline_score_i ~ Normal(mu_i, sigma)
 mu_i = alpha + beta_1 intervention_i + beta_2 baseline_score_i + beta_3 ses_index_i
 ```
 
-Priors:
+The change is that every parameter now needs a prior. Each prior is chosen with reference to the scale of the outcome and the substantive expectations discussed in notebook 02:
 
 ```text
 alpha ~ Normal(60, 15)
@@ -65,7 +105,13 @@ beta_ses ~ Normal(0, 4)
 sigma ~ Exponential(1)
 ```
 
+Each line is a statement about the parameter on the score-point scale. The intercept prior `Normal(60, 15)` says that, for a hypothetical student with intervention = 0, baseline = 0, and SES = 0, the expected endline score is around 60, with a plausible range from roughly 30 to 90. That range covers the observed score distribution and rules out impossible values like 200. The `Normal(0, 10)` on the intervention coefficient is the weakly informative prior from notebook 02: zero is the prior best guess, but effects up to about 20 points either way are not ruled out. The baseline coefficient prior `Normal(0.6, 0.2)` reflects strong prior evidence that baseline scores predict endline scores with a slope between roughly 0.2 and 1.0. The SES prior `Normal(0, 4)` allows a moderate effect in either direction. The residual standard deviation `sigma` is given an `Exponential(1)` prior, which keeps it positive and weakly pulls it toward smaller values.
+
+These priors are defensible because they sit on the scale of the actual outcome and because each one corresponds to a substantive claim that could be challenged on substantive grounds. A reviewer who disagrees with the baseline-prior centre of 0.6 has a specific number to argue with, not a vague philosophical objection.
+
 ## Fit with brms
+
+The model is fitted in `brms`, which provides a high-level R interface to Stan. The formula syntax is the same `lm`-style notation, but the priors are passed in explicitly and the back-end performs Hamiltonian Monte Carlo to draw samples from the posterior distribution rather than maximising a likelihood. The chunk below is marked `eval: false` because actually fitting the model requires a working CmdStan installation, but the structure is the working pattern for every subsequent Bayesian regression in this workshop.
 
 ```{r}
 #| eval: false
@@ -92,7 +138,13 @@ bayes_model <- brm(
 summary(bayes_model)
 ```
 
+A few of the arguments deserve attention. `chains = 4` runs four independent Markov chains, each producing its own samples; comparing them is the basis for the convergence diagnostics covered in notebook 06. `iter = 2000` is the total length of each chain, of which the first half is discarded as warm-up. `seed = 2026` makes the run reproducible. `backend = "cmdstanr"` uses CmdStan rather than RStan, which is the more reliable backend on most current setups but does require the `install_cmdstan()` step from the setup guide.
+
+The `summary(bayes_model)` call returns sections for the population-level coefficients (analogues of the `lm` coefficients), the family-specific parameters (here just `sigma`), and convergence diagnostics including R-hat and effective sample size for each parameter. Each coefficient row shows the posterior mean, the standard error of that mean, the 95% credible interval, and the diagnostics. The credible interval is the column most directly comparable to the frequentist confidence interval, but its interpretation is different: it is a 95% probability statement about the parameter, conditional on the model.
+
 ## Posterior Interpretation
+
+The `summary()` output is convenient but limited. The richer move is to extract the posterior draws directly and compute whatever summary the research question actually needs. `tidybayes` is built for this: `spread_draws()` returns the posterior samples in a tidy tibble, and ordinary `dplyr` verbs do the rest.
 
 ```{r}
 #| eval: false
@@ -111,14 +163,13 @@ posterior_draws |>
   )
 ```
 
-Useful claims:
+Each column in that summary corresponds to a different kind of substantive claim. The posterior mean is a single best-guess number. The 95% credible interval describes the range of plausible values under the model, and is the right column to report alongside the mean. The two probability columns answer questions of practical importance: `prob_positive` is the posterior probability that the intervention helps at all, and `prob_practical` is the posterior probability that the effect exceeds the 3-point threshold identified in notebook 02 as the minimum substantively meaningful gain.
 
-- The posterior mean effect is the average effect across the posterior draws.
-- The 95% credible interval contains the central 95% of posterior mass.
-- `Pr(effect > 0 | data)` answers whether the intervention is likely beneficial under the model.
-- `Pr(effect > 3 | data)` answers whether the effect likely exceeds a practical threshold.
+The framing here matters. In a frequentist analysis, the question "what is the probability that the intervention helps?" is not a question the framework answers; the p-value addresses a different question. In the Bayesian analysis, the probability is a direct property of the posterior. If `prob_positive` is 0.97 and `prob_practical` is 0.62, the analyst can say the intervention almost certainly helps under this model, while there is moderate but not strong evidence that the help exceeds the practical threshold. That is a richer claim than "p < 0.05," and it maps onto the decision the research is meant to inform.
 
 ## Posterior Plot
+
+A density plot of the posterior makes the probability statements above visible at a glance. The dashed line at zero divides effects that hurt from effects that help; the area of the curve to the right of zero is `prob_positive`. The dotted line at 3 marks the practical threshold; the area to the right of that line is `prob_practical`. A reader can see the answer without computing it.
 
 ```{r}
 #| eval: false
@@ -134,7 +185,11 @@ posterior_draws |>
   )
 ```
 
+Posterior density plots are the workhorse figure for Bayesian results. They show the central estimate, the uncertainty, and the position of any substantively important threshold in one image. They are also easy to misread, in two ways. A wide posterior is not the same as no effect; it is genuine uncertainty about a quantity that may still be entirely on one side of zero. And a narrow posterior is not certainty about reality; it is certainty conditional on this model and these priors. Reporting the figure alongside the prior choices and the convergence diagnostics is what licenses the inference.
+
 ## Posterior Predictions
+
+Coefficient summaries are useful, but applied audiences usually understand predicted outcomes more readily. The same posterior can be used to predict the expected endline score for hypothetical students with specified covariate values. `add_epred_draws()` returns the posterior distribution of the expected outcome (the linear predictor on the response scale), which is the quantity to report when the question is "what score would this kind of student be expected to get?"
 
 ```{r}
 #| eval: false
@@ -151,7 +206,7 @@ predicted |>
   median_qi(.epred)
 ```
 
-This expresses the expected endline score for comparable students with and without the intervention.
+This compares two otherwise-identical students, one in the control condition and one in the treatment condition, both at the sample mean baseline and at SES = 0. The output gives the posterior median expected endline score for each, along with an uncertainty interval. The difference between the two rows is the estimated intervention effect expressed in score points on the original outcome scale, which is the scale a policy audience can act on. A difference of about 5 points, for instance, is more interpretable than a difference of 0.4 standard deviations or an odds ratio.
 
 ## Exercise
 
@@ -168,5 +223,5 @@ Using the Bayesian model:
 
 ## Takeaway
 
-Bayesian regression uses familiar model structures but changes the inferential output. Instead of asking whether a coefficient is statistically significant, we summarize what the posterior distribution says about the size, direction, and practical importance of the effect.
+Bayesian regression uses familiar model structures and changes the inferential output. The same `lm`-style formula and the same linear predictor produce posterior distributions instead of point estimates. Those posteriors can be summarised flexibly: by their means, by their credible intervals, by the probability they place on substantively important thresholds, or by the predicted outcomes they imply for hypothetical cases. The next notebook extends this exact workflow to binary and ordinal outcomes; the workflow does not change, only the likelihood does.
 
